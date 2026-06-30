@@ -1,4 +1,4 @@
-function scarica() {
+async function scarica() {
   const lista = document.getElementById("lista").value;
 
   const codici = lista
@@ -9,22 +9,31 @@ function scarica() {
   const baseUrl = "https://valentino-cdn.thron.com/delivery/public/thumbnail/valentino/cb:";
   const suffix = "/t8s7yi/std/600x600/immagine1.jpg";
 
-  codici.forEach((codice, i) => {
-    setTimeout(() => {
-      const url = baseUrl + codice + suffix;
+  for (let i = 0; i < codici.length; i++) {
+    const codice = codici[i];
+    const url = baseUrl + codice + suffix;
 
-      fetch(url)
-        .then(res => res.blob())
-        .then(blob => {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = codice + ".jpg";
-          link.click();
-        })
-        .catch(() => {
-          alert("Errore su " + codice);
-        });
+    try {
+      const res = await fetch(url);
 
-    }, i * 400);
-  });
+      // ✅ controllo se esiste davvero
+      if (!res.ok || res.headers.get("content-type").indexOf("image") === -1) {
+        alert("Immagine NON trovata per: " + codice);
+        continue;
+      }
+
+      const blob = await res.blob();
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = codice + ".jpg";
+      link.click();
+
+      // pausa per evitare blocchi browser
+      await new Promise(r => setTimeout(r, 400));
+
+    } catch (err) {
+      alert("Errore su " + codice);
+    }
+  }
 }
