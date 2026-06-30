@@ -2,13 +2,10 @@ const BASE_URL = "https://valentino-cdn.thron.com/delivery/public/thumbnail/vale
 const SUFFIX = "/t8s7yi/std/600x600/immagine1.jpg";
 
 function leggiCodici() {
-  const testo = document.getElementById("lista").value;
-
-  return testo
+  return document.getElementById("lista").value
     .split(/\n|,|;|\s+/)
     .map(c => c.trim().toUpperCase())
-    .filter(Boolean)
-    .filter((c, i, arr) => arr.indexOf(c) === i);
+    .filter(Boolean);
 }
 
 function creaUrl(codice) {
@@ -19,93 +16,73 @@ function pausa(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-function aggiungiLog(tipo, testo) {
-  const log = document.getElementById("log");
-  const li = document.createElement("li");
+// ✅ TAGLIA LO SPAZIO SOPRA
+function cropDalBasso(img) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-  li.className = tipo;
-  li.textContent = testo;
+  // mantieni larghezza originale
+  canvas.width = img.width;
 
-  log.prepend(li);
+  // prendi solo la parte bassa (tipo ultimi 60%)
+  const cropHeight = img.height * 0.6;
+
+  canvas.height = cropHeight;
+
+  const sx = 0;
+  const sy = img.height - cropHeight;
+
+  ctx.drawImage(
+    img,
+    sx, sy, img.width, cropHeight,
+    0, 0, img.width, cropHeight
+  );
+
+  return canvas;
 }
 
-function aggiornaStatus(testo) {
-  document.getElementById("status").textContent = testo;
-}
-
-function pulisci() {
-  document.getElementById("lista").value = "";
-  document.getElementById("log").innerHTML = "";
-  aggiornaStatus("Nessun download avviato.");
-}
-
-function scaricaBlob(blob, nomeFile) {
+function scarica(blob, nome) {
   const url = URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = nomeFile;
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome;
+  a.click();
 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function scaricaImmagine(codice) {
-  const url = creaUrl(codice);
-
-  const res = await fetch(url);
-  const contentType = res.headers.get("content-type") || "";
-
-  if (!res.ok || !contentType.includes("image")) {
-    throw new Error("Immagine non trovata");
-  }
-
+  const res = await fetch(creaUrl(codice));
   const blob = await res.blob();
 
-  // ✅ SALVA ESATTAMENTE L'IMMAGINE ORIGINALE (NO CANVAS)
-  scaricaBlob(blob, codice + ".jpg");
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      const canvas = cropDalBasso(img);
+
+      canvas.toBlob(b => {
+        scarica(b, codice + ".jpg");
+        resolve();
+      }, "image/jpeg", 0.95);
+    };
+
+    img.onerror = reject;
+    img.src = URL.createObjectURL(blob);
+  });
 }
 
 async function scaricaImmagini() {
   const codici = leggiCodici();
-  const btn = document.getElementById("btnScarica");
 
-  document.getElementById("log").innerHTML = "";
-
-  if (codici.length === 0) {
-    aggiornaStatus("Inserisci almeno un codice articolo");
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = "Download in corso...";
-
-  let ok = 0;
-  let err = 0;
-
-  for (let i = 0; i < codici.length; i++) {
-    const codice = codici[i];
-
-    aggiornaStatus(`Download ${i + 1} di ${codici.length}: ${codice}`);
-
+  for (let codice of codici) {
     try {
       await scaricaImmagine(codice);
-
-      ok++;
-      aggiungiLog("ok", `${codice}.jpg scaricato`);
     } catch {
-      err++;
-      aggiungiLog("err", `${codice}: non trovato`);
+      console.log("Errore:", codice);
     }
 
     await pausa(400);
   }
-
-  aggiornaStatus(`Completo → OK: ${ok} | Errori: ${err}`);
-
-  btn.disabled = false;
-  btn.textContent = "Scarica immagini";
 }
