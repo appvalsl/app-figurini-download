@@ -1,15 +1,20 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   background: #f6f3ef;
   color: #211b18;
 }
+
 .container {
   max-width: 760px;
   margin: 0 auto;
   padding: 32px 16px;
 }
+
 .hero {
   background: linear-gradient(135deg, #251814, #7d1f1a);
   color: white;
@@ -17,6 +22,7 @@ body {
   padding: 28px;
   margin-bottom: 18px;
 }
+
 .tag {
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -25,8 +31,20 @@ body {
   margin: 0 0 8px;
   font-weight: bold;
 }
-h1 { margin: 0 0 12px; font-size: 38px; }
-p { line-height: 1.5; }
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 38px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+p {
+  line-height: 1.5;
+}
+
 .card {
   background: white;
   border: 1px solid #e2d8d0;
@@ -35,11 +53,13 @@ p { line-height: 1.5; }
   margin-bottom: 16px;
   box-shadow: 0 10px 30px rgba(40, 25, 15, 0.08);
 }
+
 label {
   display: block;
   font-weight: bold;
   margin-bottom: 10px;
 }
+
 textarea {
   width: 100%;
   min-height: 230px;
@@ -50,15 +70,18 @@ textarea {
   font-size: 16px;
   outline: none;
 }
+
 textarea:focus {
   border-color: #7d1f1a;
   box-shadow: 0 0 0 4px rgba(125, 31, 26, 0.12);
 }
+
 .buttons {
   display: flex;
   gap: 10px;
   margin-top: 12px;
 }
+
 button {
   flex: 1;
   border: 0;
@@ -69,33 +92,61 @@ button {
   color: white;
   background: #7d1f1a;
 }
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 button.secondary {
   background: #2d2521;
 }
+
 #status {
   color: #6b5d55;
   margin-bottom: 10px;
 }
+
 #log {
   padding-left: 0;
   list-style: none;
   margin: 0;
 }
+
 #log li {
   padding: 9px 10px;
   border-radius: 10px;
   margin-bottom: 7px;
   font-size: 14px;
 }
-.ok { background: #e8f7ee; color: #176b35; }
-.err { background: #fff0ee; color: #9b2118; }
-.info { background: #f2eee9; color: #594b44; }
+
+.ok {
+  background: #e8f7ee;
+  color: #176b35;
+}
+
+.err {
+  background: #fff0ee;
+  color: #9b2118;
+}
+
+.info {
+  background: #f2eee9;
+  color: #594b44;
+}
+
 .note {
   text-align: center;
   color: #74675f;
   font-size: 14px;
 }
+
 @media (max-width: 600px) {
-  .buttons { flex-direction: column; }
-  h1 { font-size: 30px; }
+  .buttons {
+    flex-direction: column;
+  }
+
+  h1 {
+    font-size: 30px;
+  }
 }
