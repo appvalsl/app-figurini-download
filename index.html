@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Download Figurini</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="container">
     <section class="hero">
       <p class="tag">Tool download immagini</p>
       <h1>Download Figurini</h1>
-      <p>Incolla i codici articolo. L'app costruisce il link corretto con prefisso <strong>WS0</strong> e scarica le immagini rinominandole con il codice articolo.</p>
+      <p>Inserisci i codici articolo a 6 caratteri. Il file scaricato viene rinominato con il codice articolo, ad esempio <strong>393VOD.jpg</strong>.</p>
     </section>
 
     <section class="card">
       <label for="lista">Codici articolo</label>
-      <textarea id="lista" placeholder="Esempio:\n393VOD\nGC2ERU\nABC123"></textarea>
+      <textarea id="lista" placeholder="Esempio:\n393VOD\nGC2ERU\nAB123C"></textarea>
+
       <div class="buttons">
-        <button onclick="scarica()">Scarica immagini</button>
+        <button id="btnScarica" onclick="scaricaImmagini()">Scarica immagini</button>
         <button class="secondary" onclick="pulisci()">Pulisci</button>
       </div>
     </section>
@@ -29,7 +30,7 @@
       <ul id="log"></ul>
     </section>
 
-    <p class="note">Nota: Chrome o Edge potrebbero chiedere di consentire download multipli. Cliccare su "Consenti".</p>
+    <p class="note">Se il browser chiede di consentire download multipli, cliccare su "Consenti".</p>
   </main>
 
   <script src="script.js"></script>
