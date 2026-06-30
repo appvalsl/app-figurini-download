@@ -5,24 +5,18 @@ function leggiCodici() {
   const testo = document.getElementById("lista").value;
 
   return testo
-    .split(/\n|,|;|\t|\s+/)
-    .map(codice => codice.trim().toUpperCase())
+    .split(/\n|,|;|\s+/)
+    .map(c => c.trim().toUpperCase())
     .filter(Boolean)
-    .filter((codice, index, array) => array.indexOf(codice) === index);
+    .filter((c, i, arr) => arr.indexOf(c) === i);
 }
 
-function creaUrlFigurino(codiceArticolo) {
-  /*
-    ATTENZIONE:
-    Il codice articolo resta quello normale a 6 caratteri.
-    Esempio: 393VOD
+function creaUrl(codice) {
+  return BASE_URL + "WS0" + codice + SUFFIX;
+}
 
-    Il prefisso WS0 serve SOLO per costruire il link tecnico del CDN.
-    Quindi:
-    393VOD -> cb:WS0393VOD
-  */
-
-  return BASE_URL + "WS0" + codiceArticolo + SUFFIX;
+function pausa(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
 function aggiungiLog(tipo, testo) {
@@ -45,162 +39,73 @@ function pulisci() {
   aggiornaStatus("Nessun download avviato.");
 }
 
-function pausa(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function caricaImmagineDaBlob(blob) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(blob);
-
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(img);
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("Errore caricamento immagine"));
-    };
-
-    img.src = objectUrl;
-  });
-}
-
-function creaCanvasQuadratoDalBasso(img) {
-  /*
-    Qui creiamo un'immagine quadrata.
-
-    Se l'immagine originale è 474x600:
-    - il quadrato sarà 600x600
-    - l'immagine viene centrata orizzontalmente
-    - l'immagine viene appoggiata in basso
-    - lo spazio vuoto resta sopra
-  */
-
-  const size = Math.max(img.width, img.height);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-
-  const ctx = canvas.getContext("2d");
-
-  // Sfondo bianco
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, size, size);
-
-  // Centratura orizzontale
-  const x = (size - img.width) / 2;
-
-  // Appoggio sul basso
-  const y = size - img.height;
-
-  ctx.drawImage(img, x, y);
-
-  return canvas;
-}
-
-function canvasToBlob(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      blob => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error("Errore conversione canvas"));
-        }
-      },
-      "image/jpeg",
-      0.95
-    );
-  });
-}
-
 function scaricaBlob(blob, nomeFile) {
-  const objectUrl = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
-  link.href = objectUrl;
+  link.href = url;
   link.download = nomeFile;
 
   document.body.appendChild(link);
   link.click();
   link.remove();
 
-  setTimeout(() => {
-    URL.revokeObjectURL(objectUrl);
-  }, 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function scaricaSingolaImmagine(codiceArticolo) {
-  const url = creaUrlFigurino(codiceArticolo);
+async function scaricaImmagine(codice) {
+  const url = creaUrl(codice);
 
-  const response = await fetch(url, {
-    cache: "no-store"
-  });
+  const res = await fetch(url);
+  const contentType = res.headers.get("content-type") || "";
 
-  const contentType = response.headers.get("content-type") || "";
-
-  if (!response.ok || !contentType.toLowerCase().includes("image")) {
+  if (!res.ok || !contentType.includes("image")) {
     throw new Error("Immagine non trovata");
   }
 
-  const blobOriginale = await response.blob();
+  const blob = await res.blob();
 
-  const img = await caricaImmagineDaBlob(blobOriginale);
-
-  const canvasQuadrato = creaCanvasQuadratoDalBasso(img);
-
-  const blobQuadrato = await canvasToBlob(canvasQuadrato);
-
-  scaricaBlob(blobQuadrato, codiceArticolo + ".jpg");
+  // ✅ SALVA ESATTAMENTE L'IMMAGINE ORIGINALE (NO CANVAS)
+  scaricaBlob(blob, codice + ".jpg");
 }
 
 async function scaricaImmagini() {
   const codici = leggiCodici();
-  const bottone = document.getElementById("btnScarica");
+  const btn = document.getElementById("btnScarica");
 
   document.getElementById("log").innerHTML = "";
 
   if (codici.length === 0) {
-    aggiornaStatus("Inserisci almeno un codice articolo.");
+    aggiornaStatus("Inserisci almeno un codice articolo");
     return;
   }
 
-  bottone.disabled = true;
-  bottone.textContent = "Download in corso...";
+  btn.disabled = true;
+  btn.textContent = "Download in corso...";
 
   let ok = 0;
-  let errore = 0;
+  let err = 0;
 
   for (let i = 0; i < codici.length; i++) {
     const codice = codici[i];
 
-    aggiornaStatus("Download " + (i + 1) + " di " + codici.length + ": " + codice);
-
-    if (codice.length !== 6) {
-      errore++;
-      aggiungiLog("err", codice + ": codice non valido, deve essere di 6 caratteri.");
-      continue;
-    }
+    aggiornaStatus(`Download ${i + 1} di ${codici.length}: ${codice}`);
 
     try {
-      await scaricaSingolaImmagine(codice);
+      await scaricaImmagine(codice);
 
       ok++;
-      aggiungiLog("ok", codice + ".jpg scaricato in formato quadrato");
-    } catch (error) {
-      errore++;
-      aggiungiLog("err", codice + ": immagine non trovata o non scaricabile");
+      aggiungiLog("ok", `${codice}.jpg scaricato`);
+    } catch {
+      err++;
+      aggiungiLog("err", `${codice}: non trovato`);
     }
 
-    await pausa(450);
+    await pausa(400);
   }
 
-  aggiornaStatus("Completato. Scaricati: " + ok + " - Errori: " + errore + ".");
+  aggiornaStatus(`Completo → OK: ${ok} | Errori: ${err}`);
 
-  bottone.disabled = false;
-  bottone.textContent = "Scarica immagini";
+  btn.disabled = false;
+  btn.textContent = "Scarica immagini";
 }
