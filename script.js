@@ -6,9 +6,12 @@ async function scarica() {
     .map(c => c.trim())
     .filter(c => c !== "");
 
-  const baseUrl = "https://valentino-cdn.thron.com/delivery/public/thumbnail/valentino/cb:";
+  const baseUrl = "https://valentino-cdn.thron.com/delivery/public/thumbnail/valentino/cb:WS0";
   const suffix = "/t8s7yi/std/600x600/immagine1.jpg";
 
+
+
+  
   for (let i = 0; i < codici.length; i++) {
     const codice = codici[i];
     const url = baseUrl + codice + suffix;
