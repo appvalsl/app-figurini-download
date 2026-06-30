@@ -1,28 +1,21 @@
-const baseUrl = "https://valentino-cdn.thron.com/delivery/public/thumbnail/valentino/cb:";
-const suffix = "/t8s7yi/std/600x600/immagine1.jpg";
+const BASE_URL = "https://valentino-cdn.thron.com/delivery/public/thumbnail/valentino/cb:";
+const SUFFIX = "/t8s7yi/std/600x600/immagine1.jpg";
 
-function normalizzaCodice(codice) {
-  let c = codice.trim();
-  if (!c) return "";
+function leggiCodici() {
+  const testo = document.getElementById("lista").value;
 
-  // Se l'utente incolla gia WS0, non lo raddoppio.
-  if (c.toUpperCase().startsWith("WS0")) {
-    return c;
-  }
-
-  // Il CDN usa cb:WS0 + codice articolo.
-  return "WS0" + c;
+  return testo
+    .split(/\n|,|;|\t|\s+/)
+    .map(codice => codice.trim().toUpperCase())
+    .filter(Boolean)
+    .filter((codice, index, array) => array.indexOf(codice) === index);
 }
 
-function nomeFileDaCodice(codiceOriginale) {
-  let c = codiceOriginale.trim();
-
-  // Il file viene salvato senza il prefisso tecnico WS0 se l'utente lo ha inserito.
-  if (c.toUpperCase().startsWith("WS0")) {
-    c = c.substring(3);
-  }
-
-  return c.toUpperCase() + ".jpg";
+function creaUrlFigurino(codiceArticolo) {
+  // Il codice articolo rimane quello a 6 caratteri.
+  // Nel CDN il codice viene inserito nel percorso dopo cb:WS0.
+  // Esempio: codice 393VOD => cb:WS0393VOD
+  return BASE_URL + "WS0" + codiceArticolo + SUFFIX;
 }
 
 function aggiungiLog(tipo, testo) {
@@ -33,50 +26,82 @@ function aggiungiLog(tipo, testo) {
   log.prepend(li);
 }
 
-function pulisci() {
-  document.getElementById("lista").value = "";
-  document.getElementById("status").textContent = "Nessun download avviato.";
-  document.getElementById("log").innerHTML = "";
+function aggiornaStatus(testo) {
+  document.getElementById("status").textContent = testo;
 }
 
-function scarica() {
-  const testo = document.getElementById("lista").value;
-  const codiciOriginali = testo
-    .split(/\n|,|;|\t|\s+/)
-    .map(c => c.trim())
-    .filter(Boolean)
-    .filter((c, i, arr) => arr.indexOf(c) === i);
+function pulisci() {
+  document.getElementById("lista").value = "";
+  document.getElementById("log").innerHTML = "";
+  aggiornaStatus("Nessun download avviato.");
+}
 
-  const status = document.getElementById("status");
-  const log = document.getElementById("log");
-  log.innerHTML = "";
+function pausa(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  if (codiciOriginali.length === 0) {
-    status.textContent = "Inserisci almeno un codice articolo.";
+async function scaricaSingolaImmagine(codiceArticolo) {
+  const url = creaUrlFigurino(codiceArticolo);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!response.ok || !contentType.toLowerCase().includes("image")) {
+    throw new Error("immagine non trovata");
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = codiceArticolo + ".jpg";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
+async function scaricaImmagini() {
+  const codici = leggiCodici();
+  const bottone = document.getElementById("btnScarica");
+  document.getElementById("log").innerHTML = "";
+
+  if (codici.length === 0) {
+    aggiornaStatus("Inserisci almeno un codice articolo.");
     return;
   }
 
-  status.textContent = "Avvio download di " + codiciOriginali.length + " immagini...";
+  bottone.disabled = true;
+  bottone.textContent = "Download in corso...";
 
-  codiciOriginali.forEach((codiceOriginale, i) => {
-    setTimeout(() => {
-      const codiceCdn = normalizzaCodice(codiceOriginale);
-      const url = baseUrl + codiceCdn + suffix;
-      const nomeFile = nomeFileDaCodice(codiceOriginale);
+  let ok = 0;
+  let errore = 0;
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = nomeFile;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+  for (let i = 0; i < codici.length; i++) {
+    const codice = codici[i];
+    aggiornaStatus("Download " + (i + 1) + " di " + codici.length + ": " + codice);
 
-      aggiungiLog("info", "Aperto/download richiesto: " + nomeFile + " da " + codiceCdn);
+    if (codice.length !== 6) {
+      errore++;
+      aggiungiLog("err", codice + ": codice non valido, deve essere di 6 caratteri.");
+      continue;
+    }
 
-      if (i === codiciOriginali.length - 1) {
-        status.textContent = "Download richiesti completati. Controlla la cartella Download.";
-      }
-    }, i * 500);
-  });
+    try {
+      await scaricaSingolaImmagine(codice);
+      ok++;
+      aggiungiLog("ok", codice + ".jpg scaricato");
+    } catch (error) {
+      errore++;
+      aggiungiLog("err", codice + ": immagine non trovata o non scaricabile");
+    }
+
+    await pausa(450);
+  }
+
+  aggiornaStatus("Completato. Scaricati: " + ok + " - Errori: " + errore + ".");
+  bottone.disabled = false;
+  bottone.textContent = "Scarica immagini";
 }
